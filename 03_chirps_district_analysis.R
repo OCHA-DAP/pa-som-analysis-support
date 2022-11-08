@@ -27,8 +27,8 @@ consec_seasons <- c("MAM2020", "OND2020", "MAM2021", "OND2021", "MAM2022")
 sel_seasons <- c("MAM2011", "MAM2017", "MAM2022", "OND2011", "OND2017")
 
 
-sel_files <- as.vector(outer(years_interest, c(mam_months, ond_months), paste, sep="_"))
-som_files <- file_list[grepl(paste(sel_files, collapse = "|"), file_list)]
+# sel_files <- as.vector(outer(years_interest, c(mam_months, ond_months), paste, sep="_"))
+# som_files <- file_list[grepl(paste(sel_files, collapse = "|"), file_list)]
 
 #####
 # reading in chirps files
