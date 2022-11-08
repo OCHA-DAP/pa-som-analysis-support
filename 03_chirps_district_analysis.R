@@ -10,13 +10,12 @@ library(ncdf4)
 #####
 # setting options
 options(scipen = 999999, digits = 22)
-file_path <- paste0(Sys.getenv("AA_DATA_DIR"), 
-                    "/public/raw/som/chirps/")
-file_list <- list.files(file_path, pattern = "som_chirps_monthly")
-somSF <- st_read(paste0(Sys.getenv("AA_DATA_DIR"), "/public/raw/som/cod_ab/som_cod_ab.shp.zip"), 
+som_dir <- Sys.getenv("SOM_ANALYSIS_DIR")
+# file_path <- paste0(Sys.getenv("AA_DATA_DIR"), "/public/raw/som/chirps/")
+# file_list <- list.files(file_path, pattern = "som_chirps_monthly")
+somSF <- st_read(file.path(som_dir, "/data/cod_ab/som_cod_ab.shp.zip"), 
                  layer = "Som_Admbnda_Adm2_UNDP")
-somalia_adm2_chirps_intersection <- read_csv(paste0(Sys.getenv("AA_DATA_DIR"), 
-                                                    "/public/processed/som/chirps/grid_intersections/somalia_adm2_chirps_intersection.csv"))
+somalia_adm2_chirps_intersection <- read_csv(file.path(som_dir, "/data/grid_intersections/somalia_adm2_chirps_intersection.csv"))
 
 #####
 # setting values
@@ -33,23 +32,26 @@ som_files <- file_list[grepl(paste(sel_files, collapse = "|"), file_list)]
 
 #####
 # reading in chirps files
-read_files <- function(filePath, fileName){
-  ncObj <- nc_open(paste0(filePath, fileName))
-  DataCube <- ncvar_get(ncObj, "precipitation") %>%
-    data.frame() %>%
-    bind_cols(paste0(round(ncvar_get(ncObj, "X") + 0.025, 3), 
-                     ifelse(round(ncvar_get(ncObj, "X") + 0.025, 3) > 0, "E", "W"))) %>%
-    setNames(c(paste0(round(ncvar_get(ncObj, "Y"), 3), 
-                      ifelse(round(ncvar_get(ncObj, "Y"), 3) > 0, "N", "S")), 
-               "Longitude")) %>%
-    gather(key = "Latitude", value = "precipitation", -Longitude) %>%
-    mutate(Date = str_extract(ncObj$filename,"(?<=monthly_).+(?=_r0.05)"))
-  nc_close(ncObj)
-  return(DataCube)
-}
+#read_files <- function(filePath, fileName){
+#  ncObj <- nc_open(paste0(filePath, fileName))
+#  DataCube <- ncvar_get(ncObj, "precipitation") %>%
+#    data.frame() %>%
+#    bind_cols(paste0(round(ncvar_get(ncObj, "X") + 0.025, 3), 
+#                     ifelse(round(ncvar_get(ncObj, "X") + 0.025, 3) > 0, "E", "W"))) %>%
+#    setNames(c(paste0(round(ncvar_get(ncObj, "Y"), 3), 
+#                      ifelse(round(ncvar_get(ncObj, "Y"), 3) > 0, "N", "S")), 
+#               "Longitude")) %>%
+#    gather(key = "Latitude", value = "precipitation", -Longitude) %>%
+#    mutate(Date = str_extract(ncObj$filename,"(?<=monthly_).+(?=_r0.05)"))
+#  nc_close(ncObj)
+#  return(DataCube)
+#}
 
-chirpsData <- som_files %>%
-  map_df(~ read_files(file_path, .)) 
+#chirpsData <- som_files %>%
+#  map_df(~ read_files(file_path, .)) 
+
+#write_csv(chirpsData, file.path(som_dir, "/data/chirps/SomaliachirpsData.csv"))
+chirpsData <- read_csv(file.path(som_dir, "/data/chirps/SomaliachirpsData.csv"))
 
 #####
 # aggregating data
@@ -70,7 +72,6 @@ ggplot(aggData, aes(x=Year, y=total, fill=Season_Yr)) +
   geom_bar(stat = "identity", position = position_dodge(preserve = "single")) + 
   ggtitle("Average MAM/OND Seasonal Rainfall for a grid across the country") + 
   ylab("Seasonal Rainfall (mm)")
-
 
 plot(somSF$geometry)
 
@@ -172,3 +173,11 @@ ggplot(data = SeasonData, aes(geometry = geometry)) +
                     limit = c(0, 400),
                     na.value = "#BEBEBE") + 
   facet_wrap(~Season)
+
+ggsave(
+  filename = file.path(plot_dir, "ipc.png"),
+  plot = p_ipc,
+  height = 10,
+  width = 6,
+  units = "in"
+)
