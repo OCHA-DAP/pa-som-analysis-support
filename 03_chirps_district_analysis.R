@@ -31,6 +31,8 @@ sel_seasons <- c("MAM2011", "MAM2017", "MAM2022", "OND2011", "OND2017")
 sel_files <- as.vector(outer(years_interest, c(mam_months, ond_months), paste, sep="_"))
 som_files <- file_list[grepl(paste(sel_files, collapse = "|"), file_list)]
 
+#####
+# reading in chirps files
 read_files <- function(filePath, fileName){
   ncObj <- nc_open(paste0(filePath, fileName))
   DataCube <- ncvar_get(ncObj, "precipitation") %>%
@@ -63,7 +65,7 @@ aggData <- chirpsData %>%
   summarise(total = sum(month_ave, na.rm = T))
 
 #####
-# plotting 
+# plotting MAM/OND for a grid 
 ggplot(aggData, aes(x=Year, y=total, fill=Season_Yr)) + 
   geom_bar(stat = "identity", position = position_dodge(preserve = "single")) + 
   ggtitle("Average MAM/OND Seasonal Rainfall for a grid across the country") + 
@@ -73,6 +75,7 @@ ggplot(aggData, aes(x=Year, y=total, fill=Season_Yr)) +
 plot(somSF$geometry)
 
 #####
+# calculating area of each grid in district
 somalia_adm2_chirps_intersection <- somalia_adm2_chirps_intersection %>% 
   mutate(GridPerc = GridArea / DistArea, 
          Centroid = paste0(round(Longitude, 3), "_", round(Latitude,3)))
@@ -81,6 +84,7 @@ chirpsData2 <- chirpsData %>%
   mutate(Centroid = paste0(str_sub(Longitude, 1, -2), "_", str_sub(Latitude, 1, -2)))
 
 #####
+# summarising info by district
 chirps_adm2 <- somalia_adm2_chirps_intersection %>%
   left_join(chirpsData2, by = "Centroid") %>%
   mutate(PercPrec = precipitation * GridPerc) %>%
@@ -96,6 +100,7 @@ chirps_adm2 <- somalia_adm2_chirps_intersection %>%
   left_join(somSF, by = "admin2Pcod")
 
 #####
+# plotting MAM/OND by district
 chirps_adm2 %>%
   group_by(Season, Year, Season_Yr) %>%
   summarise(dist_mean = mean(ssn_total, na.rm = T)) %>% 
@@ -103,7 +108,9 @@ chirps_adm2 %>%
   geom_bar(stat = "identity", position = position_dodge(preserve = "single")) + 
   ggtitle("Average MAM/OND Seasonal Rainfall for a district across the country") + 
   ylab("Seasonal Rainfall (mm)") 
+
 #####
+# plotting with facet
 chirps_adm2 %>%
   group_by(Season, Year, Season_Yr) %>%
   summarise(dist_mean = mean(ssn_total, na.rm = T)) %>% 
@@ -115,6 +122,7 @@ chirps_adm2 %>%
 
 
 #####
+# plotting maps for the whole time series
 ggplot(data = chirps_adm2, aes(geometry = geometry)) + 
   geom_sf(aes(fill = ssn_total)) + 
   ggtitle("Seasonal Rainfall") + 
@@ -130,7 +138,7 @@ ggplot(data = chirps_adm2, aes(geometry = geometry)) +
   facet_wrap(~Season, ncol = 23)
 
 #####
-
+# plotting maps for the 2020, 2021 and 2022 seasons
 SeasonData <- chirps_adm2 %>%
   filter(Season %in% consec_seasons)
 
@@ -148,7 +156,7 @@ ggplot(data = SeasonData, aes(geometry = geometry)) +
   facet_wrap(~Season)
 
 #####
-
+# plotting maps for selected seasons
 SeasonData <- chirps_adm2 %>%
   filter(Season %in% sel_seasons)
 
@@ -164,9 +172,3 @@ ggplot(data = SeasonData, aes(geometry = geometry)) +
                     limit = c(0, 400),
                     na.value = "#BEBEBE") + 
   facet_wrap(~Season)
-
-#####
-
-
-
-
