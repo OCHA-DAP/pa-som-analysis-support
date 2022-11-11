@@ -9,5 +9,5 @@ Install packages using:
 ```
   ## install.packages("remotes")
   remotes::install_github("dickoa/rhdx")
-  add installation for R package
+  # add installation for R package
 ```
