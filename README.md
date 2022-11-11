@@ -2,7 +2,7 @@
 
 This repository contains the work done in support of the Somalia Office.
 
-# Getting up and running:
+## Getting started
 
 Install packages using:
 
