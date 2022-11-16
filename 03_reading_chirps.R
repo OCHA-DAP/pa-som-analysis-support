@@ -47,4 +47,4 @@ read_files <- function(filePath, fileName){
 chirpsData <- som_files %>%
   map_df(~ read_files(file_path, .)) 
 
-write_csv(chirpsData, file.path(som_dir, "/data/chirps/SomaliachirpsData.csv"))
+write_csv(chirpsData, file.path(som_dir, "/data/chirps/Somalia_CHIRPSData.csv"))

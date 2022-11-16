@@ -69,6 +69,8 @@ chirps_adm2 <- somalia_adm2_chirps_intersection %>%
   summarise(ssn_total = sum(adm2prec, na.rm = T)) %>%
   left_join(somSF, by = "admin2Pcod")
 
+write_csv(chirps_adm2, file.path(som_dir, "/data/chirps/SomaliaCHIRPSData_byDistrict_2000_2022.csv"))
+
 #####
 # plotting MAM/OND by district
 dist_mam_ond_plot <- chirps_adm2 %>%
