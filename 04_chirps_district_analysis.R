@@ -1,4 +1,4 @@
-#### Analysis of CHIRPS rainfall by district in Somalia
+#### Saving CHIRPS data by district from 2000 to 2022
 
 #####
 # Reading in required libraries
