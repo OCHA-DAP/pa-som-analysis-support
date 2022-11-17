@@ -4,6 +4,7 @@ library(gghdx)
 library(patchwork)
 library(sf)
 library(ggrepel)
+library(ggsankey)
 gghdx()
 
 som_dir <- Sys.getenv("SOM_ANALYSIS_DIR")
@@ -884,3 +885,158 @@ ggsave(
   width = 7,
   height = 8
 )
+
+################################
+#### CONFLICT DISAGGREGATED ####
+################################
+
+df_conflict_all <- acled.api(
+  email.address = Sys.getenv("EMAIL_ADDRESS_WORK"),
+  access.key = Sys.getenv("ACLED_API_KEY"),
+  country = "Somalia",
+  start.date = "2010-01-01",
+  end.date = "2022-11-16",
+  all.variables = TRUE
+) %>%
+  mutate(
+    date = as.Date(event_date)
+  )
+
+df_sub_event <- df_conflict_all %>%
+  filter(
+    lubridate::year(date) >= 2022
+  ) %>%
+  group_by(
+    event_type,
+    sub_event_type
+  ) %>%
+  summarize(
+    n = n(),
+    fatalities = sum(fatalities, na.rm = TRUE),
+    .groups = "drop"
+  ) 
+
+sub_event_fct <- df_sub_event %>%
+  arrange(
+    n
+  ) %>%
+  pull(sub_event_type) %>%
+  as.factor
+
+df_conflict_se_month <- df_conflict_all %>%
+  filter(
+    !is.na(fatalities),
+    !is.na(sub_event_type)
+  ) %>%
+  mutate(
+    year = lubridate::year(date),
+    month = lubridate::month(date),
+    sub_event_type = factor(sub_event_type, levels = sub_event_fct)
+  ) %>%
+  group_by(
+    year, month, sub_event_type
+  ) %>%
+  summarize(
+    fatalities = sum(fatalities),
+    .groups = "drop"
+  ) %>%
+  complete(
+    year,
+    month,
+    sub_event_type,
+    fill = list(
+      fatalities = 0
+    )
+  )
+
+df_conflict_se_group <- df_conflict_se_month %>%
+  filter(
+    year != 2022
+  ) %>%
+  group_by(
+    month,
+    sub_event_type
+  ) %>%
+  summarize(
+    min_fatalities = min(fatalities),
+    max_fatalities = max(fatalities),
+    .groups = "drop"
+  )
+
+# monthly plotting
+
+p_conflict_se <- ggplot(
+  mapping = aes(
+    x = month
+  )
+) +
+  geom_ribbon(
+    data = df_conflict_se_group,
+    mapping = aes(
+      ymin = min_fatalities - 10,
+      ymax = max_fatalities + 10
+    ),
+    alpha = 0.3,
+    fill = hdx_hex("tomato-hdx")
+  ) +
+  geom_line(
+    data = df_conflict_se_month %>% filter(year == 2022, month < 11),
+    mapping = aes(
+      y = fatalities
+    ),
+    color = hdx_hex("tomato-hdx"),
+    lwd = 2
+  ) +
+  labs(
+    title = "Monthly reported fatalities due to violence",
+    subtitle = "2022 against max and min observed 2010 - 2021",
+    caption = "Data from ACLED, https://acleddata.com",
+    x = "",
+    y = "Fatalities (monthly total)"
+  ) +
+  scale_x_continuous(
+    breaks = seq(3, 12, 3),
+    labels = month.name[seq(3, 12, 3)]
+  ) +
+  facet_wrap(
+    ~sub_event_type
+  )
+
+df_sub_event %>%
+  mutate(
+    event = case_when(
+      event_type == "Battles" ~ "Battles",
+      sub_event_type == "Shelling/artillery/missile attack" ~ "Shelling/artillery/missile attack",
+      sub_event_type == "Suicide bomb" ~ "Suicide bomb",
+      sub_event_type == "Air/drone strike" ~ "Air/drone strike",
+      event_type == "Violence against civilians" ~ "Attack on civilians",
+      TRUE ~ "Other"
+    )
+  ) %>%
+  group_by(
+    event
+  ) %>%
+  summarize(
+    fatalities = sum(fatalities)
+  ) %>%
+  arrange(
+    fatalities
+  ) %>%
+  mutate(
+    event = factor(event, levels = event)
+  ) %>%
+  ggplot() +
+  geom_bar(
+    aes(
+      x = event,
+      y = fatalities
+    ),
+    stat = "identity",
+    fill = hdx_hex("tomato-hdx")
+  ) +
+  coord_flip() +
+  labs(
+    y = "Fatalities (total 2022)",
+    x = "",
+    title = "Causes of reported fatalities due to violence, Somalia, 2022"
+  )
