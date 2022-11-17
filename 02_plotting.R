@@ -1,4 +1,5 @@
 library(tidyverse)
+library(acled.api)
 library(gghdx)
 library(patchwork)
 library(sf)
@@ -199,6 +200,7 @@ p_p5_pct <- ggplot() +
 
 p_ipc <- p_p3_pct + p_p4_pct + p_p5_pct + 
   plot_annotation(title = 'IPC phases in Somalia',
+                  subtitle = "Current and first projections",
                   theme = theme(plot.title = element_text(size = 18)))
 
 ggsave(
@@ -287,9 +289,9 @@ p_conflict <- ggplot(
   ) +
   geom_text(
     data = data.frame(
-      x = 11.1,
-      y = 300,
-      label = "2010 - 2021"
+      x = c(11.1, 1.75, 1.75),
+      y = c(300, 450, 100),
+      label = c("2010 - 2021", "Max", "Min")
     ),
     aes(
       x = x,
@@ -303,6 +305,7 @@ p_conflict <- ggplot(
   ) +
   labs(
     title = "Monthly reported fatalities due to violence",
+    subtitle = "2022 against max and min observed 2010 - 2021",
     caption = "Data from ACLED, https://acleddata.com",
     x = "",
     y = "Fatalities (monthly total)"
@@ -564,6 +567,13 @@ sf_water_change <- df_water_change %>%
   ) %>%
   st_as_sf()
 
+arrow_df <- data.frame(
+  x = 44.5,
+  xend = c(43.4, 44.18, 47.95),
+  y = 6.5,
+  yend = c(3.77, 4.6, 8.16)
+)
+
 p_ipc_conflict_water <- ggplot() +
   geom_sf(
     data = sf_p5,
@@ -585,7 +595,6 @@ p_ipc_conflict_water <- ggplot() +
     fill = NA
   ) +
   scale_linetype_identity(
-    guide = "legend",
     name = "Abnormal\nwater prices",
     label = ""
   ) +
@@ -598,22 +607,52 @@ p_ipc_conflict_water <- ggplot() +
     alpha = 0.1,
     color = "black"
   ) +
+  geom_segment(
+    data = arrow_df,
+    mapping = aes(
+      x = x,
+      xend = xend,
+      y = y,
+      yend = yend
+    ),
+    color = "#444444",
+    arrow = arrow(length = unit(0.1, "inches"))
+  ) +
+  geom_label_hdx(
+    data = data.frame(
+      x = 44.5,
+      y = 6.5,
+      label = "Districts with high\nwater price increases"
+    ),
+    aes(
+      x = x,
+      y = y,
+      label = label
+    ),
+    fill = "#444444",
+    color = "white",
+    label.size = 0,
+    fontface = "bold",
+    size = 2.7
+  ) +
   scale_size_identity(
     guide = "legend",
     name = "Violent\nevent",
     label = ""
   ) +
-  guides(
-    size = guide_legend(override.aes = list(alpha = 1))
-  ) +
   coord_sf(
     datum = NA
   ) +
+  guides(
+    size = guide_legend(override.aes = list(alpha = 1))
+  ) +
   labs(
-    title = "Projected P5 populations, conflict, and water prices",
-    subtitle = "IPC projections October to December 2022; all violent events in 2022",
+    title = "IPC projections, conflict, and water prices",
+    subtitle = "IPC Phase 5 projections October to December 2022; all violent events in 2022",
     fill = "P5 population\n% of total",
-    caption = "Conflict data from ACLED, https://acleddata.com\nWater price data from FSNAU, https://dashboard.fsnau.org\nIPC data from the IPC, https://www.ipcinfo.org"
+    caption = "Conflict data from ACLED, https://acleddata.com\nWater price data from FSNAU, https://dashboard.fsnau.org\nIPC data from the IPC, https://www.ipcinfo.org",
+    x = "",
+    y = ""
   )
 
 ggsave(
@@ -696,6 +735,23 @@ p_chirps <- df_chirps_plot %>%
     size = 4,
     color = hdx_hex("gray-dark")
   ) +
+  geom_segment(
+    x = 90,
+    xend = 65,
+    y = 85,
+    yend = 85,
+    arrow = arrow(length = unit(0.1, "inches")),
+    color = hdx_hex("tomato-hdx")
+  ) +
+  geom_text_hdx(
+    x = 92,
+    y = 85,
+    label = "Last 2 seasons",
+    color = hdx_hex("tomato-hdx"),
+    hjust = 0,
+    fontface = "bold",
+    check_overlap = TRUE
+  ) +
   coord_cartesian(
     clip = "off"
   ) +
@@ -706,7 +762,6 @@ p_chirps <- df_chirps_plot %>%
     subtitle = "October - December and March - May seasons",
     caption = "Data from CHIRPS, https://chc.ucsb.edu/data/chirps"
   )
-
 
 ggsave(
   filename = file.path(plot_dir, "chirps.png"),
@@ -746,7 +801,7 @@ p_chirps_map <- df_chirps %>%
     )
   ) +
   scale_fill_gradient(
-    low = hdx_hex("tomato-hdx"),
+    low = hdx_hex("sapphire-hdx"),
     high = "white",
     labels = scales::label_percent()
   ) +
