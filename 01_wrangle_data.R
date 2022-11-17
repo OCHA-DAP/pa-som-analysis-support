@@ -2,6 +2,7 @@ library(acled.api)
 library(idmc)
 library(rhdx)
 library(tidyverse)
+library(rvest)
 
 som_dir <- Sys.getenv("SOM_ANALYSIS_DIR")
 data_dir <- file.path(som_dir, "data")
@@ -80,8 +81,10 @@ df_conflict_country <- df_conflict_adm2_comp %>%
 df_displacement <- idmc_get_data() %>%
   idmc_transform_daily() %>%
   filter(
-    country == "Somalia",
-    displacement_type == "Conflict"
+    country == "Somalia"
+  ) %>%
+  group_by(
+    displacement_type
   ) %>%
   complete(
     date = seq(min(.data$date), max(.data$date), by = "day"),
@@ -89,8 +92,22 @@ df_displacement <- idmc_get_data() %>%
       displacement_daily = 0
     )
   ) %>%
-  select(
-    date, displacement_daily
+  mutate(
+    displacement_type = tolower(displacement_type)
+  ) %>%
+  pivot_wider(
+    id_cols = date,
+    values_from = displacement_daily,
+    names_from = displacement_type,
+    names_prefix = "displacement_"
+  ) %>%
+  mutate(
+    across(
+      .cols = starts_with("displacement"),
+      .fns = replace_na,
+      replace = 0
+    ),
+    displacement_total = displacement_conflict + displacement_disaster + displacement_other
   )
 
 #############
@@ -152,7 +169,7 @@ som_districts <- c(
 
 df <- df %>%
   dplyr::mutate(
-    "area" := ifelse(.data$country %in% som_districts & .data$date_of_analysis %in% c("Aug 2021", "Jan 2022", "Mar 2022", "May 2022", "Aug 2022"), som_districts, .data$area),
+    "area" := ifelse(.data$country %in% som_districts & .data$date_of_analysis %in% c("Aug 2021", "Jan 2022", "Mar 2022", "May 2022", "Aug 2022"), .data$country, .data$area),
     "country" := ifelse(.data$country %in% som_districts & .data$date_of_analysis %in% c("Aug 2021", "Jan 2022", "Mar 2022", "May 2022", "Aug 2022"), "Somalia", .data$country)
   )
 
@@ -188,29 +205,35 @@ df_clean <- df_piv %>%
   ) %>%
   dplyr::rename(
     "population" := "population_analysed_num",
-    "area_phase" := "population_analysed_area_phase",
+    "phase" := "population_analysed_area_phase",
     "analysis_period" := "population_analysed_analysis_period"
   ) %>%
   readr::type_convert() %>%
   dplyr::mutate(
-    analysis_period_start = lubridate::dmy(
-      x = paste(
-        "15",
-        stringr::str_extract(
-          .data[["analysis_period"]],
-          "(.*) - "
+    analysis_period_start = lubridate::floor_date(
+      lubridate::dmy(
+        x = paste(
+          "15",
+          stringr::str_extract(
+            .data[["analysis_period"]],
+            "(.*) - "
+          )
         )
-      )
+      ),
+      "month"
     ),
-    analysis_period_end = lubridate::dmy(
-      x = paste(
-        "15",
-        stringr::str_extract(
-          .data[["analysis_period"]],
-          " - (.*)$"
+    analysis_period_end = lubridate::ceiling_date(
+      lubridate::dmy(
+        x = paste(
+          "15",
+          stringr::str_extract(
+            .data[["analysis_period"]],
+            " - (.*)$"
+          )
         )
-      )
-    ),
+      ),
+      "month"
+    ) - lubridate::days(1),
     .after = "analysis_period"
   )
 
@@ -354,6 +377,43 @@ df_prices_final <- df_prices %>%
   )
 
 ##############################
+#### FSNAU DASHBOARD DATA ####
+##############################
+
+# reading price of water data
+urls <- paste0(
+  "https://dashboard.fsnau.org/climate/price-of-water/28-",
+  paste(
+    rep(c("June", "December"), 12),
+    rep(2011:2022, each = 2),
+    sep = "-"
+  )
+)
+
+df_water_price <- map(
+  .x = urls,
+  .f = ~ read_html(.x) %>%
+    html_elements("table") %>%
+    html_table() %>%
+    pluck(1) %>%
+    select(
+      - `#`
+    )
+) %>%
+  reduce(
+    left_join,
+    by = c("Region", "District")
+  ) %>%
+  pivot_longer(
+    cols = - c(Region, District),
+    names_to = "month",
+    values_to = "water_price"
+  ) %>%
+  mutate(
+    month = as.Date(paste0(month, "-01"), format = "%b-%Y-%d")
+  )
+
+##############################
 #### FINAL OUTPUT DATASET ####
 ##############################
 
@@ -377,10 +437,33 @@ write_csv(
 )
 
 write_csv(
-  df_ipc_complete,
+  df_clean,
   file.path(
     data_dir,
     "ipc_complete_data.csv"
   )
 )
 
+write_csv(
+  df_ipc_complete,
+  file.path(
+    data_dir,
+    "ipc_complete_daily_data.csv"
+  )
+)
+
+write_csv(
+  df_water_price,
+  file.path(
+    data_dir,
+    "som_water_prices.csv"
+  )
+)
+
+write_csv(
+  df_conflict_adm2,
+  file.path(
+    data_dir,
+    "som_conflict_adm2.csv"
+  )
+)
