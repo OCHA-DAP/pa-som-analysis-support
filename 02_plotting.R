@@ -703,7 +703,8 @@ p_chirps <- df_chirps_plot %>%
     x = "OND (average rainfall)",
     y = "MAM (average rainfall)",
     title = "Average district rainfall, millimeters",
-    subtitle = "October - December and March - May seasons"
+    subtitle = "October - December and March - May seasons",
+    caption = "Data from CHIRPS, https://chc.ucsb.edu/data/chirps"
   )
 
 
