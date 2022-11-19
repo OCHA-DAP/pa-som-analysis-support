@@ -145,43 +145,38 @@ names(df) <- df_names$names %>%
     )
   )
 
-# adjust the data for Somalia since it's stored in a different way
-som_districts <- c(
-  "Awdal",
-  "Bakool",
-  "Banadir",
-  "Bari",
-  "Bay",
-  "Galgaduud",
-  "Gedo",
-  "Hiraan",
-  "Juba dhexe",
-  "Juba hoose",
-  "Mudug",
-  "Nugaal",
-  "Sanaag",
-  "Shabelle dhexe",
-  "Shabelle hoose",
-  "Sool",
-  "Togdheer",
-  "Woqooyi galbeed"
-)
+# somalia data repair
 
 df <- df %>%
+  dplyr::slice(
+    -c(1:5)
+  ) %>%
   dplyr::mutate(
-    "area" := ifelse(.data$country %in% som_districts & .data$date_of_analysis %in% c("Aug 2021", "Jan 2022", "Mar 2022", "May 2022", "Aug 2022"), .data$country, .data$area),
-    "country" := ifelse(.data$country %in% som_districts & .data$date_of_analysis %in% c("Aug 2021", "Jan 2022", "Mar 2022", "May 2022", "Aug 2022"), "Somalia", .data$country)
-  )
-
+    country_group = cumsum(is.na(dplyr::lag(country)) | is.na(country))
+  ) %>%
+  dplyr::group_by(
+    country_group
+  ) %>%
+  dplyr::mutate(
+    mutate_group_temp_ = any(is.na(country)) | !all(is.na(area)) | n() == 1,
+    area = dplyr::case_when(
+      mutate_group_temp_ ~ area,
+      dplyr::row_number() == 1 ~ NA_character_,
+      TRUE ~ country
+    ),
+    country = dplyr::case_when(
+      mutate_group_temp_ ~ country,
+      dplyr::row_number() > 1 ~ stringr::str_extract(country[1], ".*(?=:)"),
+      TRUE ~ country
+    )
+  ) %>%
+  dplyr::ungroup()
 
 # filter and wrangle the dataset
 
 # pivot so that each row is a phase/area and columns are variables for that
 # specific analysis period (e.g. current or projection)
 df_piv <- df %>%
-  dplyr::slice(
-    -c(1:5)
-  ) %>%
   dplyr::filter(
     !is.na(.data[["area"]])
   ) %>%
