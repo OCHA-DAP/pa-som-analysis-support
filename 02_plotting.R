@@ -230,6 +230,8 @@ df_conflict_month <- df_som %>%
   summarize(
     fatalities = sum(fatalities),
     events_battles = sum(events_battles),
+    events_vac = sum(events_vac),
+    events = sum(events),
     .groups = "drop"
   )
 
@@ -245,6 +247,8 @@ df_conflict_group <- df_conflict_month %>%
     max_battles = max(events_battles),
     min_fatalities = min(fatalities),
     max_fatalities = max(fatalities),
+    min_events = min(events),
+    max_events = max(events),
     .groups = "drop"
   )
 
@@ -265,7 +269,7 @@ p_conflict <- ggplot(
     fill = hdx_hex("tomato-hdx")
   ) +
   geom_line(
-    data = df_conflict_month %>% filter(year == 2022, month < 11),
+    data = df_conflict_month %>% filter(year == 2022, month <= 11),
     mapping = aes(
       y = fatalities
     ),
@@ -274,8 +278,8 @@ p_conflict <- ggplot(
   ) +
   geom_text(
     data = data.frame(
-      x = 11.1,
-      y = 1030,
+      x = 12,
+      y = 948,
       label = 2022
     ),
     mapping = aes(
@@ -290,7 +294,7 @@ p_conflict <- ggplot(
   ) +
   geom_text(
     data = data.frame(
-      x = c(11.1, 1.75, 1.75),
+      x = c(12, 1.75, 1.75),
       y = c(300, 450, 100),
       label = c("2010 - 2021", "Max", "Min")
     ),

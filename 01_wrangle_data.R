@@ -16,7 +16,7 @@ df_conflict <- acled.api(
   access.key = Sys.getenv("ACLED_API_KEY"),
   country = "Somalia",
   start.date = "2010-01-01",
-  end.date = "2022-11-01"
+  end.date = "2022-11-30"
 ) %>%
   mutate(
     date = as.Date(event_date)
