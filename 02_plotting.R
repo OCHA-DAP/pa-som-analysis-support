@@ -757,12 +757,21 @@ p_chirps <- df_chirps_plot %>%
     fontface = "bold",
     check_overlap = TRUE
   ) +
+  geom_text_hdx(
+    x = 95,
+    y = 175,
+    label = "Each dot represents 2 seasons:\nOND one year, and MAM the following",
+    color = "gray",
+    hjust = 0,
+    fontface = "bold",
+    check_overlap = TRUE
+  ) +
   coord_cartesian(
     clip = "off"
   ) +
   labs(
-    x = "OND (average rainfall)",
-    y = "MAM (average rainfall)",
+    x = "October - December",
+    y = "March - May",
     title = "Average district rainfall, millimeters",
     subtitle = "October - December and March - May seasons",
     caption = "Data from CHIRPS, https://chc.ucsb.edu/data/chirps"
@@ -775,6 +784,86 @@ ggsave(
   width = 8,
   units = "in"
 )
+
+############################
+#### CHIRPS ALTERNATIVE ####
+############################
+
+df_chirps2 <- df_chirps %>%
+  group_by(
+    Year,
+    Season_Yr
+  ) %>%
+  summarize(
+    rf = mean(x = ssn_total),
+    .groups = "drop"
+  ) %>%
+  mutate(
+    Year_Label = ifelse(
+      Season_Yr == "OND",
+      Year + 0.5,
+      Year
+    )
+  )
+
+p_chirps2 <- df_chirps2 %>%
+  filter(
+    Year_Label <= 2020
+  ) %>%
+  ggplot(
+    aes(
+      x = Year_Label,
+      y = rf
+    )
+  ) +
+  geom_point() +
+  geom_point(
+    data = filter(
+      df_chirps2,
+      Year_Label > 2020
+    ),
+    size = 3,
+    color = hdx_hex("tomato-hdx")
+  ) +
+  geom_point(
+    data = filter(
+      df_chirps2,
+      Year_Label == 2010.5
+    ),
+    size = 3,
+    color = hdx_hex("gray-dark")
+  ) +
+  geom_text_hdx(
+    x = 2010.5,
+    y = 54,
+    label = "2011",
+    fontface = "bold",
+    check_overlap = TRUE,
+    size = 5
+  ) +
+  geom_text_hdx(
+    x = 2021,
+    y = 100,
+    label = "Last 4 seasons",
+    fontface = "bold",
+    size = 5,
+    color = hdx_hex("tomato-hdx"),
+    check_overlap = TRUE
+  ) +
+  labs(
+    x = "Year (March - May and October - December seasons)",
+    y = "Average rainfall (mm)",
+    title = "Average seasonal rainfall, Somalia, 2000 - 2022"
+  )
+
+ggsave(
+  filename = file.path(plot_dir, "chirps_alt.png"),
+  plot = p_chirps2,
+  height = 4,
+  width = 8,
+  units = "in"
+)
+
 
 ####################
 #### CHIRPS MAP ####
