@@ -103,7 +103,7 @@ p_p3_pct <- ggplot() +
   ) +
   geom_text(
     data = data.frame(
-      x = as.Date("2021-10-01"),
+      x = as.Date("2021-07-01"),
       y = c(0.45, 0.333),
       label = c("Projected", "Current"),
       color = hdx_hex(c("tomato-hdx", "gray-black"))
@@ -119,7 +119,7 @@ p_p3_pct <- ggplot() +
   scale_color_identity() +
   labs(
     x = "",
-    y = "Phase 3+ (% of population)",
+    y = "% of population",
     title = "Population in phase 3+"
   ) +
   scale_y_continuous(
@@ -154,7 +154,7 @@ p_p4_pct <- ggplot() +
   scale_color_identity() +
   labs(
     x = "",
-    y = "Phase 4+ (% of population)",
+    y = "% of population",
     title = "Population in phase 4+"
   ) +
   scale_y_continuous(
@@ -189,7 +189,7 @@ p_p5_pct <- ggplot() +
   scale_color_identity() +
   labs(
     x = "",
-    y = "Phase 5 (% of population)",
+    y = "% of population",
     title = "Population in phase 5",
     caption = "Data from the IPC, https://www.ipcinfo.org"
   ) +
@@ -200,15 +200,18 @@ p_p5_pct <- ggplot() +
 # put IPC plots together
 
 p_ipc <- p_p3_pct + p_p4_pct + p_p5_pct + 
-  plot_annotation(title = 'IPC phases in Somalia',
-                  subtitle = "Current and first projections",
-                  theme = theme(plot.title = element_text(size = 18)))
+  plot_annotation(title = 'IPC phases, 2017 - 2022',
+                  subtitle = "Historical current and first projections",
+                  theme = theme(
+                    plot.title = element_text(size = 24),
+                    plot.subtitle = element_text(size = 18)
+                  ))
 
 ggsave(
   filename = file.path(plot_dir, "ipc.png"),
   plot = p_ipc,
-  height = 5,
-  width = 16,
+  height = 4,
+  width = 12,
   units = "in"
 )
 
@@ -251,6 +254,8 @@ df_conflict_group <- df_conflict_month %>%
     max_events = max(events),
     .groups = "drop"
   )
+
+# fatalities since August
 
 # monthly plotting
 
@@ -309,7 +314,7 @@ p_conflict <- ggplot(
     hjust = 1
   ) +
   labs(
-    title = "Monthly reported fatalities due to violence",
+    title = "Monthly reported fatalities due to violence, 2010 - 2022",
     subtitle = "2022 against max and min observed 2010 - 2021",
     caption = "Data from ACLED, https://acleddata.com",
     x = "",
@@ -365,7 +370,12 @@ df_water_change_ts <- df_water_price %>%
     !is.na(water_price)
   ) %>%
   mutate(
-    highlight = water_price[month == max(month)] > 2
+    highlight = water_price[month == max(month)] > 2,
+    District = case_when(
+      District == "Garoowe" ~ "Garowe",
+      District == "Baydhaba" ~ "Baidoa",
+      TRUE ~ District
+    )
   )
 
 df_water_end <- df_water_change_ts %>%
@@ -378,7 +388,7 @@ df_water_end <- df_water_change_ts %>%
     water_price = case_when(
       District == "Caluula" ~ 1.9,
       District == "Cabudwaaq" ~ 2.1,
-      District == "Garoowe" ~ 2.95,
+      District == "Garowe" ~ 2.95,
       TRUE ~ water_price
     )
   )
@@ -540,7 +550,7 @@ df_conflict_points <- acled.api(
   access.key = Sys.getenv("ACLED_API_KEY"),
   country = "Somalia",
   start.date = "2022-01-01",
-  end.date = "2022-11-16",
+  end.date = "2022-12-12",
   all.variables = TRUE
 ) %>%
   mutate(
@@ -720,15 +730,25 @@ p_chirps <- df_chirps_plot %>%
     )
   ) +
   geom_point(
-    color = "grey"
+    color = hdx_hex("gray-dark"),
   ) +
   geom_text_hdx(
-    data = bind_rows(df_chirps_plot_4_yr, df_chirps_2011),
+    data = df_chirps_plot_4_yr,
     mapping = aes(
       label = year
     ),
     nudge_y = -6,
-    size = 3
+    size = 3,
+    color = hdx_hex("tomato-hdx")
+  ) +
+  geom_text_hdx(
+    data = df_chirps_2011,
+    mapping = aes(
+      label = year
+    ),
+    nudge_y = -6,
+    size = 3,
+    color = hdx_hex("sapphire-hdx")
   ) +
   geom_point(
     data = df_chirps_plot_4_yr,
@@ -738,7 +758,7 @@ p_chirps <- df_chirps_plot %>%
   geom_point(
     data = df_chirps_2011,
     size = 4,
-    color = hdx_hex("gray-dark")
+    color = hdx_hex("sapphire-hdx")
   ) +
   geom_segment(
     x = 90,
@@ -761,7 +781,7 @@ p_chirps <- df_chirps_plot %>%
     x = 95,
     y = 175,
     label = "Each dot represents 2 seasons:\nOND one year, and MAM the following",
-    color = "gray",
+    color = hdx_hex("gray-dark"),
     hjust = 0,
     fontface = "bold",
     check_overlap = TRUE
@@ -772,7 +792,7 @@ p_chirps <- df_chirps_plot %>%
   labs(
     x = "October - December",
     y = "March - May",
-    title = "Average district rainfall, millimeters",
+    title = "Average district rainfall, millimeters, 2000-2022",
     subtitle = "October - December and March - May seasons",
     caption = "Data from CHIRPS, https://chc.ucsb.edu/data/chirps"
   )
@@ -988,7 +1008,7 @@ df_conflict_all <- acled.api(
   access.key = Sys.getenv("ACLED_API_KEY"),
   country = "Somalia",
   start.date = "2010-01-01",
-  end.date = "2022-11-16",
+  end.date = "2022-12-12",
   all.variables = TRUE
 ) %>%
   mutate(
