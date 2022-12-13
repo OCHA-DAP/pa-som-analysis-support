@@ -3,7 +3,7 @@ library(idmc)
 library(rhdx)
 library(tidyverse)
 library(rvest)
-
+library(tabulizer)
 som_dir <- Sys.getenv("SOM_ANALYSIS_DIR")
 data_dir <- file.path(som_dir, "data")
 
@@ -230,6 +230,72 @@ df_clean <- df_piv %>%
       "month"
     ) - lubridate::days(1),
     .after = "analysis_period"
+  )
+
+# Add in manual data for the latest IPC release since has not been updated
+
+ipc_pdf <- extract_tables(
+  "https://fsnau.org/downloads/Multi-Partner-Technical-Release-on-Updated-IPC-Analysis-for-Somalia-fo-October-2022-to-June-2023-Final-(English)-13-Dec-2022.pdf",
+  pages = 4
+)
+
+# country level totals
+som_lvls <- str_split(ipc_pdf[[1]][23,3], pattern = "  ", simplify = TRUE) %>%
+  parse_number()
+
+# country population
+som_pop <- ipc_pdf[[1]][23,2] %>%
+  parse_number()
+
+som_type <- c(
+  rep(c("current", "first_projection", "second_projection"), each = 3)
+)
+
+som_period <- c(
+  rep(c("Oct 2022 - Dec 2022", "Jan 2023 - Mar 2023", "Apr 2023 - Jun 2023"), each = 3)
+)
+
+som_period_start <- c(
+  rep(c(as.Date("2022-10-01"), as.Date("2023-01-01"), as.Date("2023-04-01")), each = 3)
+)
+
+som_period_end <- c(
+  rep(c(as.Date("2022-12-31"), as.Date("2023-03-31"), as.Date("2023-06-30")), each = 3)
+)
+
+som_phase <- c(
+  rep(c("phase_3", "phase_4", "phase_5"), by = 3)
+)
+
+df_ipc_new <- data.frame(
+  country = "Somalia",
+  level_1_name = NA_character_,
+  area = NA_character_,
+  area_id = NA_integer_,
+  analysis_name = "Acute Food Insecurity December 2022",
+  date_of_analysis = "Dec 2022",
+  analysis_type = som_type,
+  analysis_period = som_period,
+  analysis_period_start = som_period_start,
+  analysis_period_end = som_period_end,
+  population = som_pop, # from PDF
+  phase = som_phase,
+  num = som_lvls
+) %>%
+  pivot_wider(
+    names_from = phase,
+    names_glue = "{phase}_{.value}",
+    values_from = num
+  ) %>%
+  mutate(
+    phase_1_num = 0,
+    phase_2_num = 0,
+    `phase_p3+_num` = phase_3_num + phase_4_num + phase_5_num
+  )
+
+df_clean <- df_clean %>%
+  bind_rows(
+    df_ipc_new
   )
 
 # turn data into daily data

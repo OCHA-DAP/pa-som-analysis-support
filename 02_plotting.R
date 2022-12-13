@@ -475,35 +475,72 @@ df_water_change <- df_water_price %>%
     admin1 = Region,
     admin2 = District
   )
-  
-df_ipc_rec <- df_ipc %>%
-  rename(
-    admin1 = area
+
+# Old version, updated to use the new PDF data
+# df_ipc_rec <- df_ipc %>%
+#   rename(
+#     admin1 = area
+#   ) %>%
+#   group_by(
+#     admin1
+#   ) %>%
+#   filter(
+#     is.na(level_1_name),
+#     analysis_type == "first_projection",
+#     analysis_period_start == max(analysis_period_start)
+#   ) %>%
+#   ungroup() %>%
+#   select(
+#     admin1,
+#     matches("phase_(.*)")
+#   ) %>%
+#   mutate(
+#     admin1 = case_when(
+#       admin1 == "Juba dhexe" ~ "Middle Juba",
+#       admin1 == "Juba hoose" ~ "Lower Juba",
+#       admin1 == "Shabelle dhexe" ~ "Middle Shabelle",
+#       admin1 == "Shabelle hoose" ~ "Lower Shabelle",
+#       admin1 == "Woqooyi galbeed" ~ "Woqooyi Galbeed",
+#       TRUE ~ admin1
+#     )
+#   )
+
+library(tabulizer)
+ipc_pdf <- extract_tables(
+  "https://fsnau.org/downloads/Multi-Partner-Technical-Release-on-Updated-IPC-Analysis-for-Somalia-fo-October-2022-to-June-2023-Final-(English)-13-Dec-2022.pdf",
+  pages = 4
+)
+
+pop_vec <- ipc_pdf[[1]][5:22, 2] %>%
+  parse_number()
+
+df_ipc_rec <- ipc_pdf[[1]][5:22, 3] %>%
+  str_split("  |-", simplify = TRUE) %>%
+  as.data.frame() %>%
+  mutate(
+    across(
+      .fns = ~ parse_number(.x) %>%
+        replace_na(replace = 0)
+    )
   ) %>%
-  group_by(
-    admin1
-  ) %>%
-  filter(
-    is.na(level_1_name),
-    analysis_type == "first_projection",
-    analysis_period_start == max(analysis_period_start)
-  ) %>%
-  ungroup() %>%
   select(
-    admin1,
-    matches("phase_(.*)")
+    phase_3_num = V4,
+    phase_4_num = V5,
+    phase_5_num = V6
   ) %>%
   mutate(
+    admin1 = ipc_pdf[[1]][5:22,1],
     admin1 = case_when(
-      admin1 == "Juba dhexe" ~ "Middle Juba",
-      admin1 == "Juba hoose" ~ "Lower Juba",
-      admin1 == "Shabelle dhexe" ~ "Middle Shabelle",
-      admin1 == "Shabelle hoose" ~ "Lower Shabelle",
-      admin1 == "Woqooyi galbeed" ~ "Woqooyi Galbeed",
-      TRUE ~ admin1
-    )
+      admin1 == "W. Galbeed" ~ "Woqooyi Galbeed",
+      TRUE ~ str_replace_all(admin1, c("M\\." = "Middle", "L\\." = "Lower"))
+    ),
+    `phase_p3+_num` = phase_3_num + phase_4_num + phase_5_num,
+    phase_3_pct = phase_3_num / pop_vec,
+    phase_4_pct = phase_4_num / pop_vec,
+    phase_5_pct = phase_5_num / pop_vec,
+    `phase_p3+_pct` = `phase_p3+_num` / pop_vec
   )
-
+  
 full_join(df_conf_sum, df_water_change, by = c("admin1", "admin2")) %>%
   left_join(
     df_ipc_rec,
@@ -663,7 +700,7 @@ p_ipc_conflict_water <- ggplot() +
   ) +
   labs(
     title = "IPC projections, conflict, and water prices",
-    subtitle = "IPC Phase 5 projections October to December 2022; all violent events in 2022",
+    subtitle = "IPC Phase 5 projections January to March 2023; all violent events in 2022",
     fill = "P5 population\n% of total",
     caption = "Conflict data from ACLED, https://acleddata.com\nWater price data from FSNAU, https://dashboard.fsnau.org\nIPC data from the IPC, https://www.ipcinfo.org",
     x = "",
