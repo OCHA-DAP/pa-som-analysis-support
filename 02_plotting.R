@@ -124,6 +124,10 @@ p_p3_pct <- ggplot() +
   ) +
   scale_y_continuous(
     labels = scales::percent_format()
+  ) +
+  scale_x_continuous(
+    breaks = as.Date(paste0(2017:2023, "-01-01")),
+    labels = lubridate::year
   )
 
 p_p4_pct <- ggplot() +
@@ -159,6 +163,10 @@ p_p4_pct <- ggplot() +
   ) +
   scale_y_continuous(
     labels = scales::percent_format()
+  ) +
+  scale_x_continuous(
+    breaks = as.Date(paste0(2017:2023, "-01-01")),
+    labels = lubridate::year
   )
 
 p_p5_pct <- ggplot() +
@@ -195,12 +203,16 @@ p_p5_pct <- ggplot() +
   ) +
   scale_y_continuous(
     labels = scales::percent_format()
+  ) +
+  scale_x_continuous(
+    breaks = as.Date(paste0(2017:2023, "-01-01")),
+    labels = lubridate::year
   )
 
 # put IPC plots together
 
 p_ipc <- p_p3_pct + p_p4_pct + p_p5_pct + 
-  plot_annotation(title = 'IPC phases, 2017 - 2022',
+  plot_annotation(title = 'IPC phases, 2017 - 2023',
                   subtitle = "Historical current and first projections",
                   theme = theme(
                     plot.title = element_text(size = 24),
@@ -637,7 +649,8 @@ p_ipc_conflict_water <- ggplot() +
   scale_fill_gradient(
     low = "white",
     high = hdx_hex("tomato-hdx"),
-    labels = scales::percent_format()
+    labels = scales::percent_format(),
+    breaks = c(0, 0.03, 0.06, 0.09, 0.12)
   ) +
   geom_sf(
     data = sf_water_change,
